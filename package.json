@@ -1,0 +1,22 @@
+{
+  "name": "dental_queue_app",
+  "version": "1.0.0",
+  "description": "Simple patient registration system for a dental clinic using Node.js and Express.",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "keywords": [
+    "dental",
+    "queue",
+    "express",
+    "node"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "express": "^4.21.2"
+  }
+}

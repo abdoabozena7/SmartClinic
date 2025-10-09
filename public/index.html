@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dr /Ayamn project</title>
+
+</head>
+<style>
+    body {
+      font-family: sans-serif;
+      background-color: #f8f8f8;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+
+    .container {
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      padding: 20px 30px;
+      margin-top: 40px;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 5px;
+      font-weight: bold;
+    }
+
+    input[type="text"], select {
+      width: 100%;
+      padding: 8px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #4CAF50;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .result {
+      margin-top: 20px;
+      padding: 10px;
+      background-color: #e7f4e4;
+      border: 1px solid #a5d6a7;
+      border-radius: 4px;
+      display: none;
+    }
+  </style>
+<body>
+  <div class="container">
+    <h1>سجل زيارة جديدة</h1>
+    <form id="registrationForm">
+      <label for="name">الاسم</label>
+      <input type="text" id="name" name="name" required placeholder="حط اسمك هنا">
+
+      <label for="procedure">نوع الكشف</label>
+      <select id="procedure" name="procedure" required>
+        <option value="">اختر نوع كشف</option>
+        <option value="خلع">خلع (حوالي ٣٠ دقيقة)</option>
+        <option value="حشو">حشو (حوالي ٢٠ دقيقة)</option>
+        <option value="تبييض">تبييض (حوالي ٤٥ دقيقة)</option>
+      </select>
+
+      <button type="submit">تسجيل</button>
+    </form>
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    document.getElementById('registrationForm').addEventListener('submit', async function (event) {
+      event.preventDefault();
+      const name = document.getElementById('name').value.trim();
+      const procedure = document.getElementById('procedure').value;
+      const resultEl = document.getElementById('result');
+
+      if (!name || !procedure) {
+        resultEl.textContent = 'please fill all';
+        resultEl.style.display = 'block';
+        return;
+      }
+
+      try {
+        const response = await fetch('/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ name, procedure })
+        });
+        const data = await response.json();
+        if (response.ok) {
+          const { peopleAhead, waitingTime, position } = data;
+          let message = '';
+          if (peopleAhead === 0) {
+            message = 'إنت المريض اللي بعد كده، هيتكشف عليك حالًا.';
+          } else {
+            message = `فيه ${peopleAhead} ${peopleAhead === 1 ? 'شخص' : 'أشخاص'} قدامك.\nالوقت المتوقع للانتظار: ${waitingTime} دقيقة.`;
+          }
+          resultEl.textContent = message;
+          resultEl.style.display = 'block';
+          // reset form
+          document.getElementById('registrationForm').reset();
+        } else {
+          resultEl.textContent = data.error || 'unexpected error.';
+          resultEl.style.display = 'block';
+        }
+      } catch (err) {
+        console.error(err);
+        resultEl.textContent = 'server error.';
+        resultEl.style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>
