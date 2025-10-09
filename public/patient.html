@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>حجز موعد - نظام حجز المواعيد</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #f7f7f7;
+      margin: 0;
+      padding: 20px;
+    }
+    h1 {
+      text-align: center;
+    }
+    section {
+      background-color: #fff;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    label {
+      display: block;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+    select, input {
+      width: 100%;
+      padding: 8px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background-color: #2196F3;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #1976D2;
+    }
+    .message {
+      margin-top: 10px;
+      color: #4CAF50;
+    }
+    .error {
+      margin-top: 10px;
+      color: #f44336;
+    }
+    .slots {
+      margin-top: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .slot-button {
+      padding: 8px 12px;
+      background-color: #e0e0e0;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    .slot-button.selected {
+      background-color: #4CAF50;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <h1>حجز موعد</h1>
+  <p id="welcome"></p>
+  <div style="margin-bottom: 10px;">
+    <button id="backToAdminBtn" style="display:none; background-color:#9c27b0; color:#fff; margin-left:10px;">العودة إلى لوحة الإدارة</button>
+    <button id="logoutBtn" style="background-color:#f44336; color:#fff;">تسجيل الخروج</button>
+  </div>
+  <section>
+    <h2>اختر الطبيب والخدمة</h2>
+    <form id="bookingForm">
+      <label for="patientDoctorSelect">اختر الطبيب</label>
+      <select id="patientDoctorSelect" required>
+        <option value="">-- اختر الطبيب --</option>
+      </select>
+      <label for="patientServiceSelect">اختر الخدمة</label>
+      <select id="patientServiceSelect" required>
+        <option value="">-- اختر خدمة --</option>
+      </select>
+      <label for="patientDate">التاريخ</label>
+      <input type="date" id="patientDate" required>
+      <label>المواعيد المتاحة</label>
+      <div class="slots" id="slotsContainer">
+        <!-- Time slot buttons will be injected here -->
+      </div>
+      <input type="hidden" id="selectedTime" name="selectedTime">
+      <button type="submit">حجز الموعد</button>
+      <div class="message" id="bookingSuccess" style="display:none;"></div>
+      <div class="error" id="bookingError" style="display:none;"></div>
+    </form>
+  </section>
+  <script>
+    // Determine if user is allowed (patient or simulate mode)
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    const simulate = localStorage.getItem('simulateAsPatient') === 'true';
+    if (!user || (user.role !== 'patient' && !simulate)) {
+      // Not a patient and not simulating
+      window.location.href = 'login.html';
+    } else {
+      document.getElementById('welcome').textContent = `مرحبًا، ${user.email}`;
+      // Show back to admin if in simulation
+      if (simulate) {
+        document.getElementById('backToAdminBtn').style.display = 'inline-block';
+      }
+    }
+
+    async function loadDoctors() {
+      const res = await fetch('/api/doctors');
+      const docs = await res.json();
+      const select = document.getElementById('patientDoctorSelect');
+      select.innerHTML = '<option value="">-- اختر الطبيب --</option>';
+      docs.forEach(doc => {
+        const opt = document.createElement('option');
+        opt.value = doc.id;
+        opt.textContent = doc.name;
+        opt.dataset.services = JSON.stringify(doc.services);
+        select.appendChild(opt);
+      });
+    }
+
+    // Update service list on doctor change
+    document.getElementById('patientDoctorSelect').addEventListener('change', function() {
+      const selected = this.options[this.selectedIndex];
+      const services = selected.dataset.services ? JSON.parse(selected.dataset.services) : [];
+      const serviceSelect = document.getElementById('patientServiceSelect');
+      serviceSelect.innerHTML = '<option value="">-- اختر خدمة --</option>';
+      services.forEach(svc => {
+        const opt = document.createElement('option');
+        opt.value = svc;
+        opt.textContent = svc;
+        serviceSelect.appendChild(opt);
+      });
+      // Clear previous slots
+      document.getElementById('slotsContainer').innerHTML = '';
+      document.getElementById('selectedTime').value = '';
+    });
+
+    // Load available slots when date selected
+    document.getElementById('patientDate').addEventListener('change', fetchAvailableSlots);
+    document.getElementById('patientServiceSelect').addEventListener('change', fetchAvailableSlots);
+
+    async function fetchAvailableSlots() {
+      const doctorId = document.getElementById('patientDoctorSelect').value;
+      const date = document.getElementById('patientDate').value;
+      const service = document.getElementById('patientServiceSelect').value;
+      const container = document.getElementById('slotsContainer');
+      container.innerHTML = '';
+      document.getElementById('selectedTime').value = '';
+      if (!doctorId || !date || !service) {
+        return;
+      }
+      try {
+        const res = await fetch(`/api/doctors/${doctorId}/available?date=${date}`);
+        const slots = await res.json();
+        // Filter slots by service
+        const filtered = slots.filter(slot => slot.service === service);
+        if (filtered.length === 0) {
+          container.textContent = 'لا توجد مواعيد متاحة لهذا التاريخ.';
+          return;
+        }
+        // Helper to format time with AM/PM in Arabic
+        function formatTimeLabel(time) {
+          const parts = time.split(':');
+          const hour = parseInt(parts[0], 10);
+          const suffix = hour >= 12 ? 'مساءً' : 'صباحًا';
+          return time + ' ' + suffix;
+        }
+        filtered.forEach(slot => {
+          const btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'slot-button';
+          btn.textContent = formatTimeLabel(slot.time);
+          btn.dataset.time = slot.time;
+          btn.addEventListener('click', function() {
+            // Unselect other buttons
+            document.querySelectorAll('.slot-button').forEach(b => b.classList.remove('selected'));
+            this.classList.add('selected');
+            document.getElementById('selectedTime').value = this.dataset.time;
+          });
+          container.appendChild(btn);
+        });
+      } catch (err) {
+        container.textContent = 'تعذر تحميل المواعيد.';
+      }
+    }
+
+    // Submit booking
+    document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const doctorId = document.getElementById('patientDoctorSelect').value;
+      const date = document.getElementById('patientDate').value;
+      const time = document.getElementById('selectedTime').value;
+      const service = document.getElementById('patientServiceSelect').value;
+      const success = document.getElementById('bookingSuccess');
+      const error = document.getElementById('bookingError');
+      success.style.display = 'none';
+      error.style.display = 'none';
+      if (!doctorId || !date || !time || !service) {
+        error.textContent = 'يرجى اختيار جميع الحقول.';
+        error.style.display = 'block';
+        return;
+      }
+      try {
+        const res = await fetch('/api/bookings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ doctorId, date, time, patientEmail: user.email })
+        });
+        const data = await res.json();
+        if (res.ok) {
+          success.textContent = 'تم حجز الموعد بنجاح.';
+          success.style.display = 'block';
+          // Reset selection
+          document.getElementById('slotsContainer').innerHTML = '';
+          document.getElementById('selectedTime').value = '';
+          // Reload slots to reflect booking
+          await fetchAvailableSlots();
+        } else {
+          error.textContent = data.error || 'خطأ أثناء الحجز.';
+          error.style.display = 'block';
+        }
+      } catch (err) {
+        error.textContent = 'تعذر الاتصال بالخادم.';
+        error.style.display = 'block';
+      }
+    });
+
+    // Initial load of doctors
+    loadDoctors();
+
+    // Logout handler
+    document.getElementById('logoutBtn').addEventListener('click', function() {
+      localStorage.removeItem('user');
+      localStorage.removeItem('simulateAsPatient');
+      window.location.href = 'login.html';
+    });
+
+    // Back to admin handler (only visible in simulation)
+    document.getElementById('backToAdminBtn').addEventListener('click', function() {
+      localStorage.removeItem('simulateAsPatient');
+      window.location.href = 'admin.html';
+    });
+  </script>
+</body>
+</html>
