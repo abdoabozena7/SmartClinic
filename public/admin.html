@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title >Abozena</title>
+  <title>Admin Panel</title>
   <style>
     body {
       font-family: sans-serif;
@@ -70,61 +70,60 @@
   </style>
 </head>
 <body>
-  <h1>لوحة الإدارة</h1>
+  <h1>Admin Panel</h1>
   <p id="welcome"></p>
   <div style="margin-bottom: 10px;">
-    <button id="simulateBtn" style="margin-left: 10px; background-color:#2196F3;">تجربة ك مريض</button>
-    <button id="logoutBtn" style="background-color:#f44336;">تسجيل الخروج</button>
+    <button id="simulateBtn" style="margin-left: 10px; background-color:#2196F3;">Simulate as Patient</button>
+    <button id="logoutBtn" style="background-color:#f44336;">Logout</button>
   </div>
   <section>
-    <h2>إضافة طبيب جديد</h2>
+    <h2>Add New Doctor</h2>
     <form id="addDoctorForm">
-      <label for="doctorName">اسم الطبيب</label>
-      <input type="text" id="doctorName" name="doctorName" required placeholder="اسم الطبيب">
-      <label for="doctorServices">الخدمات (مفصولة بفاصلة)</label>
-      <input type="text" id="doctorServices" name="doctorServices" required placeholder="مثل: خلع, حشو, تبييض">
-      <button type="submit">إضافة</button>
+      <label for="doctorName">Doctor Name</label>
+      <input type="text" id="doctorName" name="doctorName" required placeholder="Doctor Name">
+      <label for="doctorServices">Services (comma-separated)</label>
+      <input type="text" id="doctorServices" name="doctorServices" required placeholder="e.g., Extraction, Filling, Whitening">
+      <button type="submit">Add</button>
       <div class="message" id="doctorSuccess" style="display:none;"></div>
       <div class="error" id="doctorError" style="display:none;"></div>
     </form>
   </section>
 
   <section>
-    <h2>إضافة مواعيد لطبيب</h2>
+    <h2>Add Timeslots for Doctor</h2>
     <form id="addTimeslotForm">
-      <label for="doctorSelect">اختر الطبيب</label>
+      <label for="doctorSelect">Select Doctor</label>
       <select id="doctorSelect" required>
-        <option value="">-- اختر الطبيب --</option>
+        <option value="">-- Select Doctor --</option>
       </select>
-      <label for="serviceSelect">اختر الخدمة</label>
+      <label for="serviceSelect">Select Service</label>
       <select id="serviceSelect" required>
-        <option value="">-- اختر خدمة --</option>
+        <option value="">-- Select Service --</option>
       </select>
-      <label for="dateInput">التاريخ</label>
+      <label for="dateInput">Date</label>
       <input type="date" id="dateInput" required>
-      <label>الأوقات المتاحة</label>
-      <!-- Container to hold multiple time inputs -->
+      <label>Available Times</label>
       <div id="timesContainer">
         <input type="time" class="time-input" required>
       </div>
-      <button type="button" id="addTimeBtn" style="margin-top:10px;background-color:#607d8b;">إضافة ساعة</button>
-      <button type="submit" style="display:block;margin-top:10px;">إضافة المواعيد</button>
+      <button type="button" id="addTimeBtn" style="margin-top:10px;background-color:#607d8b;">Add Time</button>
+      <button type="submit" style="display:block;margin-top:10px;">Add Timeslots</button>
       <div class="message" id="timeslotSuccess" style="display:none;"></div>
       <div class="error" id="timeslotError" style="display:none;"></div>
     </form>
   </section>
 
   <section>
-    <h2>جميع المواعيد المحجوزة</h2>
-    <button id="refreshAppointments">تحديث القائمة</button>
+    <h2>All Booked Appointments</h2>
+    <button id="refreshAppointments">Refresh List</button>
     <table id="appointmentsTable">
       <thead>
         <tr>
-          <th>الطبيب</th>
-          <th>الخدمة</th>
-          <th>التاريخ</th>
-          <th>الوقت</th>
-          <th>البريد الإلكتروني للمريض</th>
+          <th>Doctor</th>
+          <th>Service</th>
+          <th>Date</th>
+          <th>Time</th>
+          <th>Patient Email</th>
         </tr>
       </thead>
       <tbody id="appointmentsBody">
@@ -136,10 +135,9 @@
     // Check login
     const user = JSON.parse(localStorage.getItem('user') || '{}');
     if (!user || user.role !== 'admin') {
-      // Redirect to login if not admin
       window.location.href = 'login.html';
     } else {
-      document.getElementById('welcome').textContent = `مرحبًا، ${user.email}`;
+      document.getElementById('welcome').textContent = `Welcome, ${user.email}`;
     }
 
     // Load doctors into select
@@ -147,7 +145,7 @@
       const res = await fetch('/api/doctors');
       const list = await res.json();
       const select = document.getElementById('doctorSelect');
-      select.innerHTML = '<option value="">-- اختر الطبيب --</option>';
+      select.innerHTML = '<option value="">-- Select Doctor --</option>';
       list.forEach(doc => {
         const option = document.createElement('option');
         option.value = doc.id;
@@ -162,7 +160,7 @@
       const selected = this.options[this.selectedIndex];
       const services = selected.dataset.services ? JSON.parse(selected.dataset.services) : [];
       const serviceSelect = document.getElementById('serviceSelect');
-      serviceSelect.innerHTML = '<option value="">-- اختر خدمة --</option>';
+      serviceSelect.innerHTML = '<option value="">-- Select Service --</option>';
       services.forEach(svc => {
         const opt = document.createElement('option');
         opt.value = svc;
@@ -189,17 +187,16 @@
         });
         const data = await res.json();
         if (res.ok) {
-          success.textContent = 'تم إضافة الطبيب بنجاح.';
+          success.textContent = 'Doctor added successfully.';
           success.style.display = 'block';
-          // Clear form
           this.reset();
           await loadDoctors();
         } else {
-          error.textContent = data.error || 'خطأ أثناء إضافة الطبيب.';
+          error.textContent = data.error || 'Error adding doctor.';
           error.style.display = 'block';
         }
       } catch (err) {
-        error.textContent = 'تعذر الاتصال بالخادم.';
+        error.textContent = 'Failed to connect to the server.';
         error.style.display = 'block';
       }
     });
@@ -210,7 +207,6 @@
       const doctorId = document.getElementById('doctorSelect').value;
       const service = document.getElementById('serviceSelect').value;
       const date = document.getElementById('dateInput').value;
-      // Collect all time inputs
       const timeInputs = document.querySelectorAll('#timesContainer .time-input');
       const times = Array.from(timeInputs).map(input => input.value.trim()).filter(t => t);
       const success = document.getElementById('timeslotSuccess');
@@ -218,7 +214,7 @@
       success.style.display = 'none';
       error.style.display = 'none';
       if (!doctorId || !service || !date || times.length === 0) {
-        error.textContent = 'الرجاء ملء جميع الحقول.';
+        error.textContent = 'Please fill in all fields.';
         error.style.display = 'block';
         return;
       }
@@ -230,15 +226,15 @@
         });
         const data = await res.json();
         if (res.ok) {
-          success.textContent = 'تم إضافة المواعيد بنجاح.';
+          success.textContent = 'Timeslots added successfully.';
           success.style.display = 'block';
           this.reset();
         } else {
-          error.textContent = data.error || 'حدث خطأ أثناء إضافة المواعيد.';
+          error.textContent = data.error || 'Error adding timeslots.';
           error.style.display = 'block';
         }
       } catch (err) {
-        error.textContent = 'تعذر الاتصال بالخادم.';
+        error.textContent = 'Failed to connect to the server.';
         error.style.display = 'block';
       }
     });
@@ -263,7 +259,7 @@
         });
       } catch (err) {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td colspan="5">تعذر تحميل المواعيد.</td>`;
+        tr.innerHTML = `<td colspan="5">Failed to load appointments.</td>`;
         tbody.appendChild(tr);
       }
     }
@@ -282,9 +278,7 @@
 
     // Simulate as patient handler
     document.getElementById('simulateBtn').addEventListener('click', function() {
-      // Set flag to indicate simulation mode
       localStorage.setItem('simulateAsPatient', 'true');
-      // Redirect to patient page
       window.location.href = 'patient.html';
     });
 
