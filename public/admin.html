@@ -6,66 +6,170 @@
   <title>Admin Panel</title>
   <style>
     body {
-      font-family: sans-serif;
-      background-color: #f7f7f7;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+      background: linear-gradient(180deg, #f0fbf9 0%, #f7faff 100%);
       margin: 0;
       padding: 20px;
+      color: #0f172a;
     }
+
+    h1, h2 {
+      margin: 0 0 12px;
+      line-height: 1.2;
+    }
+
     h1 {
       text-align: center;
+      color: #0ea5a4;
+      letter-spacing: 0.4px;
+      text-shadow: 0 1px 0 rgba(255,255,255,0.8);
     }
+
+    h2 {
+      color: #0c4a6e;
+    }
+
     section {
-      background-color: #fff;
-      padding: 15px;
-      margin-bottom: 20px;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      background-color: #ffffff;
+      padding: 18px;
+      margin-bottom: 22px;
+      border-radius: 14px;
+      border: 1px solid #d9f2ee;
+      box-shadow: 0 6px 18px rgba(14,165,164,0.10), 0 1px 0 rgba(14,165,164,0.08) inset;
+      transition: box-shadow .2s ease, transform .2s ease;
     }
+    section:hover {
+      box-shadow: 0 10px 24px rgba(14,165,164,0.15);
+      transform: translateY(-1px);
+    }
+
     label {
       display: block;
-      margin-top: 10px;
-      font-weight: bold;
+      margin-top: 12px;
+      font-weight: 700;
+      color: #075985;
     }
+
+    /* تعديل العرض */
     input, select, textarea {
-      width: 100%;
-      padding: 8px;
-      margin-top: 5px;
+      display: inline-block;
+      inline-size: fit-content;
+      min-inline-size: 240px;
+      max-inline-size: 420px;
+      padding: 10px 12px;
+      margin-top: 6px;
       box-sizing: border-box;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+      border: 1.5px solid #c7ece7;
+      border-radius: 10px;
+      background: #fbfffe;
+      outline: none;
+      transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
     }
+    input::placeholder, textarea::placeholder {
+      color: #94a3b8;
+    }
+    input:focus, select:focus, textarea:focus {
+      border-color: #0ea5a4;
+      box-shadow: 0 0 0 4px rgba(14,165,164,0.15);
+      background: #ffffff;
+    }
+
+    .time-input { min-inline-size: 160px; max-inline-size: 220px; }
+    #dateInput { min-inline-size: 180px; }
+    #doctorSelect, #serviceSelect { min-inline-size: 260px; }
+    #doctorName, #doctorServices { max-inline-size: 480px; }
+
     button {
-      margin-top: 15px;
-      padding: 10px 20px;
-      background-color: #4CAF50;
+      margin-top: 14px;
+      padding: 10px 18px;
+      background-image: linear-gradient(180deg, #14b8a6, #0ea5a4);
       color: #fff;
       border: none;
-      border-radius: 4px;
+      border-radius: 10px;
       cursor: pointer;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      box-shadow: 0 6px 14px rgba(20,184,166,0.25);
+      transition: transform .1s ease, box-shadow .2s ease, filter .2s ease, background .2s ease;
     }
     button:hover {
-      background-color: #45a049;
+      transform: translateY(-1px);
+      box-shadow: 0 10px 18px rgba(20,184,166,0.28);
+      filter: brightness(1.02);
     }
+    button:active {
+      transform: translateY(0);
+    }
+
+    #simulateBtn {
+      background-image: linear-gradient(180deg, #38bdf8, #0ea5e9) !important;
+      box-shadow: 0 6px 14px rgba(14,165,233,0.25) !important;
+    }
+    #simulateBtn:hover { box-shadow: 0 10px 18px rgba(14,165,233,0.30) !important; }
+
+    #logoutBtn {
+      background-image: linear-gradient(180deg, #ef4444, #dc2626) !important;
+      box-shadow: 0 6px 14px rgba(239,68,68,0.25) !important;
+    }
+    #logoutBtn:hover { box-shadow: 0 10px 18px rgba(239,68,68,0.30) !important; }
+
     .message {
       margin-top: 10px;
-      color: #4CAF50;
+      color: #059669;
+      font-weight: 700;
     }
+
     .error {
       margin-top: 10px;
-      color: #f44336;
+      color: #b91c1c;
+      font-weight: 700;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 10px;
+      margin-top: 12px;
+      background: #ffffff;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #e0f2fe;
     }
     th, td {
-      border: 1px solid #ddd;
-      padding: 8px;
+      border-bottom: 1px solid #eaf6ff;
+      padding: 12px 10px;
       text-align: center;
     }
     th {
-      background-color: #f2f2f2;
+      background: linear-gradient(180deg, #e6fffb, #ddf9ff);
+      color: #0c4a6e;
+      font-weight: 800;
+    }
+    tbody tr:nth-child(even) {
+      background: #f8fffe;
+    }
+    tbody tr:hover {
+      background: #ecfeff;
+    }
+
+    #welcome {
+      color: #0f766e;
+      text-align: center;
+      font-weight: 600;
+      background: #e6fffb;
+      border: 1px solid #c7ece7;
+      padding: 10px 12px;
+      border-radius: 10px;
+      box-shadow: 0 2px 6px rgba(14,165,164,0.12) inset;
+    }
+
+    @media (max-width: 640px) {
+      section { padding: 14px; }
+      button { width: 100%; }
+      input, select, textarea {
+        inline-size: 100%;
+        max-inline-size: 100%;
+        min-inline-size: 0;
+      }
     }
   </style>
 </head>
@@ -73,9 +177,10 @@
   <h1>Admin Panel</h1>
   <p id="welcome"></p>
   <div style="margin-bottom: 10px;">
-    <button id="simulateBtn" style="margin-left: 10px; background-color:#2196F3;">Simulate as Patient</button>
-    <button id="logoutBtn" style="background-color:#f44336;">Logout</button>
+    <button id="simulateBtn" style="margin-left: 10px;">Simulate as Patient</button>
+    <button id="logoutBtn">Logout</button>
   </div>
+
   <section>
     <h2>Add New Doctor</h2>
     <form id="addDoctorForm">
@@ -130,7 +235,8 @@
       </tbody>
     </table>
   </section>
-
+</body>
+</html>
   <script>
     // Check login
     const user = JSON.parse(localStorage.getItem('user') || '{}');
