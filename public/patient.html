@@ -88,6 +88,7 @@
       gap: 8px;
     }
     .slot-button {
+      color: #000;
       padding: 8px 12px;
       background: #e6fffb;
       border: 1px solid #c7ece7;
@@ -95,8 +96,8 @@
       cursor: pointer;
       transition: box-shadow .2s ease, transform .1s ease, background .2s ease, border-color .2s ease;
     }
-    .slot-button:hover { background: #ddf9ff; box-shadow: 0 4px 10px rgba(14,165,164,.12); transform: translateY(-1px); }
-    .slot-button.selected { background: #0ea5a4; color: #fff; border-color: #0ea5a4; }
+    .slot-button:hover { background: #e9e9e9; box-shadow: 0 4px 10px rgba(14,165,164,.12); transform: translateY(-1px); }
+    .slot-button.selected { background: #0ea5a4; color: #000000; border-color: #0ea5a4; }
 
     @media (max-width: 640px) {
       section { padding: 14px; }
@@ -141,157 +142,136 @@
   </section>
 </body>
 </html>
-  <script>
-    // Determine if user is allowed (patient or simulate mode)
-    const user = JSON.parse(localStorage.getItem('user') || '{}');
-    const simulate = localStorage.getItem('simulateAsPatient') === 'true';
-    if (!user || (user.role !== 'patient' && !simulate)) {
-      // Not a patient and not simulating
-      window.location.href = 'login.html';
-    } else {
-      document.getElementById('welcome').textContent = `مرحبًا، ${user.email}`;
-      // Show back to admin if in simulation
-      if (simulate) {
-        document.getElementById('backToAdminBtn').style.display = 'inline-block';
-      }
+<script>
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const simulate = localStorage.getItem('simulateAsPatient') === 'true';
+  if (!user || (user.role !== 'patient' && !simulate)) {
+    window.location.href = 'login.html';
+  } else {
+    document.getElementById('welcome').textContent = `Welcome, ${user.email}`;
+    if (simulate) {
+      document.getElementById('backToAdminBtn').style.display = 'inline-block';
     }
+  }
 
-    async function loadDoctors() {
-      const res = await fetch('/api/doctors');
-      const docs = await res.json();
-      const select = document.getElementById('patientDoctorSelect');
-      select.innerHTML = '<option value="">-- اختر الطبيب --</option>';
-      docs.forEach(doc => {
-        const opt = document.createElement('option');
-        opt.value = doc.id;
-        opt.textContent = doc.name;
-        opt.dataset.services = JSON.stringify(doc.services);
-        select.appendChild(opt);
-      });
-    }
-
-    // Update service list on doctor change
-    document.getElementById('patientDoctorSelect').addEventListener('change', function() {
-      const selected = this.options[this.selectedIndex];
-      const services = selected.dataset.services ? JSON.parse(selected.dataset.services) : [];
-      const serviceSelect = document.getElementById('patientServiceSelect');
-      serviceSelect.innerHTML = '<option value="">-- اختر خدمة --</option>';
-      services.forEach(svc => {
-        const opt = document.createElement('option');
-        opt.value = svc;
-        opt.textContent = svc;
-        serviceSelect.appendChild(opt);
-      });
-      // Clear previous slots
-      document.getElementById('slotsContainer').innerHTML = '';
-      document.getElementById('selectedTime').value = '';
+  async function loadDoctors() {
+    const res = await fetch('/api/doctors');
+    const docs = await res.json();
+    const select = document.getElementById('patientDoctorSelect');
+    select.innerHTML = '<option value="">Choose doctor</option>';
+    docs.forEach(doc => {
+      const opt = document.createElement('option');
+      opt.value = doc.id;
+      opt.textContent = doc.name;
+      opt.dataset.services = JSON.stringify(doc.services);
+      select.appendChild(opt);
     });
+  }
 
-    // Load available slots when date selected
-    document.getElementById('patientDate').addEventListener('change', fetchAvailableSlots);
-    document.getElementById('patientServiceSelect').addEventListener('change', fetchAvailableSlots);
+  document.getElementById('patientDoctorSelect').addEventListener('change', function() {
+    const selected = this.options[this.selectedIndex];
+    const services = selected.dataset.services ? JSON.parse(selected.dataset.services) : [];
+    const serviceSelect = document.getElementById('patientServiceSelect');
+    serviceSelect.innerHTML = '<option value="">-- Choose Service --</option>';
+    services.forEach(svc => {
+      const opt = document.createElement('option');
+      opt.value = svc;
+      opt.textContent = svc;
+      serviceSelect.appendChild(opt);
+    });
+    document.getElementById('slotsContainer').innerHTML = '';
+    document.getElementById('selectedTime').value = '';
+  });
 
-    async function fetchAvailableSlots() {
-      const doctorId = document.getElementById('patientDoctorSelect').value;
-      const date = document.getElementById('patientDate').value;
-      const service = document.getElementById('patientServiceSelect').value;
-      const container = document.getElementById('slotsContainer');
-      container.innerHTML = '';
-      document.getElementById('selectedTime').value = '';
-      if (!doctorId || !date || !service) {
+  document.getElementById('patientDate').addEventListener('change', fetchAvailableSlots);
+  document.getElementById('patientServiceSelect').addEventListener('change', fetchAvailableSlots);
+
+  async function fetchAvailableSlots() {
+    const doctorId = document.getElementById('patientDoctorSelect').value;
+    const date = document.getElementById('patientDate').value;
+    const service = document.getElementById('patientServiceSelect').value;
+    const container = document.getElementById('slotsContainer');
+    container.innerHTML = '';
+    document.getElementById('selectedTime').value = '';
+    if (!doctorId || !date || !service) {
+      return;
+    }
+    try {
+      const res = await fetch(`/api/doctors/${doctorId}/available?date=${date}`);
+      const slots = await res.json();
+      const filtered = slots.filter(slot => slot.service === service);
+      if (filtered.length === 0) {
+        container.textContent = 'No available slots for this date.';
         return;
       }
-      try {
-        const res = await fetch(`/api/doctors/${doctorId}/available?date=${date}`);
-        const slots = await res.json();
-        // Filter slots by service
-        const filtered = slots.filter(slot => slot.service === service);
-        if (filtered.length === 0) {
-          container.textContent = 'لا توجد مواعيد متاحة لهذا التاريخ.';
-          return;
-        }
-        // Helper to format time with AM/PM in Arabic
-        function formatTimeLabel(time) {
-          const parts = time.split(':');
-          const hour = parseInt(parts[0], 10);
-          const suffix = hour >= 12 ? 'مساءً' : 'صباحًا';
-          return time + ' ' + suffix;
-        }
-        filtered.forEach(slot => {
-          const btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'slot-button';
-          btn.textContent = formatTimeLabel(slot.time);
-          btn.dataset.time = slot.time;
-          btn.addEventListener('click', function() {
-            // Unselect other buttons
-            document.querySelectorAll('.slot-button').forEach(b => b.classList.remove('selected'));
-            this.classList.add('selected');
-            document.getElementById('selectedTime').value = this.dataset.time;
-          });
-          container.appendChild(btn);
+      filtered.forEach(slot => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'slot-button';
+        btn.textContent = slot.time;
+        btn.dataset.time = slot.time;
+        btn.addEventListener('click', function() {
+          document.querySelectorAll('.slot-button').forEach(b => b.classList.remove('selected'));
+          this.classList.add('selected');
+          document.getElementById('selectedTime').value = this.dataset.time;
         });
-      } catch (err) {
-        container.textContent = 'تعذر تحميل المواعيد.';
-      }
+        container.appendChild(btn);
+      });
+    } catch (err) {
+      container.textContent = 'Failed to load slots.';
     }
+  }
 
-    // Submit booking
-    document.getElementById('bookingForm').addEventListener('submit', async function(e) {
-      e.preventDefault();
-      const doctorId = document.getElementById('patientDoctorSelect').value;
-      const date = document.getElementById('patientDate').value;
-      const time = document.getElementById('selectedTime').value;
-      const service = document.getElementById('patientServiceSelect').value;
-      const success = document.getElementById('bookingSuccess');
-      const error = document.getElementById('bookingError');
-      success.style.display = 'none';
-      error.style.display = 'none';
-      if (!doctorId || !date || !time || !service) {
-        error.textContent = 'يرجى اختيار جميع الحقول.';
-        error.style.display = 'block';
-        return;
-      }
-      try {
-        const res = await fetch('/api/bookings', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ doctorId, date, time, patientEmail: user.email })
-        });
-        const data = await res.json();
-        if (res.ok) {
-          success.textContent = 'تم حجز الموعد بنجاح.';
-          success.style.display = 'block';
-          // Reset selection
-          document.getElementById('slotsContainer').innerHTML = '';
-          document.getElementById('selectedTime').value = '';
-          // Reload slots to reflect booking
-          await fetchAvailableSlots();
-        } else {
-          error.textContent = data.error || 'خطأ أثناء الحجز.';
-          error.style.display = 'block';
-        }
-      } catch (err) {
-        error.textContent = 'تعذر الاتصال بالخادم.';
+  document.getElementById('bookingForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const doctorId = document.getElementById('patientDoctorSelect').value;
+    const date = document.getElementById('patientDate').value;
+    const time = document.getElementById('selectedTime').value;
+    const service = document.getElementById('patientServiceSelect').value;
+    const success = document.getElementById('bookingSuccess');
+    const error = document.getElementById('bookingError');
+    success.style.display = 'none';
+    error.style.display = 'none';
+    if (!doctorId || !date || !time || !service) {
+      error.textContent = 'Please select all fields.';
+      error.style.display = 'block';
+      return;
+    }
+    try {
+      const res = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ doctorId, date, time, patientEmail: user.email })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        success.textContent = 'Appointment booked successfully.';
+        success.style.display = 'block';
+        document.getElementById('slotsContainer').innerHTML = '';
+        document.getElementById('selectedTime').value = '';
+        await fetchAvailableSlots();
+      } else {
+        error.textContent = data.error || 'Error during booking.';
         error.style.display = 'block';
       }
-    });
+    } catch (err) {
+      error.textContent = 'Failed to connect to the server.';
+      error.style.display = 'block';
+    }
+  });
 
-    // Initial load of doctors
-    loadDoctors();
+  loadDoctors();
 
-    // Logout handler
-    document.getElementById('logoutBtn').addEventListener('click', function() {
-      localStorage.removeItem('user');
-      localStorage.removeItem('simulateAsPatient');
-      window.location.href = 'login.html';
-    });
+  document.getElementById('logoutBtn').addEventListener('click', function() {
+    localStorage.removeItem('user');
+    localStorage.removeItem('simulateAsPatient');
+    window.location.href = 'login.html';
+  });
 
-    // Back to admin handler (only visible in simulation)
-    document.getElementById('backToAdminBtn').addEventListener('click', function() {
-      localStorage.removeItem('simulateAsPatient');
-      window.location.href = 'admin.html';
-    });
-  </script>
+  document.getElementById('backToAdminBtn').addEventListener('click', function() {
+    localStorage.removeItem('simulateAsPatient');
+    window.location.href = 'admin.html';
+  });
+</script>
 </body>
 </html>
